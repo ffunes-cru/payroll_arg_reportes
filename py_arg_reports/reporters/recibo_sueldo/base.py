@@ -195,6 +195,7 @@ def get_recibo_info(json_data: dict) -> dict:
                 'name': name,
                 'tipo_concepto': tipo_concepto,
                 'cantidad': cantidad,
+                'base': concepto.get('base'),
                 'importe': importe,
             })
 
