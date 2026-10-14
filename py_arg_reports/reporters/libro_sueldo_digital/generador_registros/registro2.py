@@ -1,7 +1,7 @@
 import datetime
 
 
-def process_reg2(empleados_liquidados: dict, fecha_pago: datetime.date) -> tuple:
+def process_reg2(empleados_liquidados: dict, fecha_pago: datetime.date, tipo_liq: str = None) -> tuple:
     """ Generacion txt de Libro Sueldos Digital
         Registro 2 Datos referenciales de la Liquidación de SyJ del trabajador
         Args:
@@ -54,7 +54,15 @@ def process_reg2(empleados_liquidados: dict, fecha_pago: datetime.date) -> tuple
         area_norm = " " * 50 if not area else area.ljust(50)
         fecha_pago_str = fecha_pago.strftime('%Y%m%d')
 
-        item = f'02{cuil}{legajo_norm}{area_norm}{cbu}030{fecha_pago_str}{fecha_rubrica}{forma_pago}'
+        dias_tope_val = info_empleado.get('dias_tope')
+        if dias_tope_val is not None:
+            dias_tope_str = str(dias_tope_val).zfill(3)
+        elif tipo_liq in ['Quincenal', '1° Quincena', '2° Quincena']:
+            dias_tope_str = '015'
+        else:
+            dias_tope_str = '030'
+
+        item = f'02{cuil}{legajo_norm}{area_norm}{cbu}{dias_tope_str}{fecha_pago_str}{fecha_rubrica}{forma_pago}'
 
         resp.append(item)
 

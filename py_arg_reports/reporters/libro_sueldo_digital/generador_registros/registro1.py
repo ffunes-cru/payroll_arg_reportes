@@ -3,7 +3,7 @@ import datetime
 from py_arg_reports.reporters.libro_sueldo_digital.tools import INDICE_TIPO_LIQUIDACIONES
 
 
-def process_reg1(cuit: str, periodo: datetime.date, q_empleados: int, nro_liq: int, tipo_liq: str) -> tuple:
+def process_reg1(cuit: str, periodo: datetime.date, q_empleados: int, nro_liq: int, tipo_liq: str, dias_base: int = None) -> tuple:
     """ Generacion txt de Libro Sueldos Digital
         Registro 1 Datos referenciales del envío de la liquidacion
         Args:
@@ -12,6 +12,7 @@ def process_reg1(cuit: str, periodo: datetime.date, q_empleados: int, nro_liq: i
             q_empleados: int, cantidad de empleados liquidados
             nro_liq: int, numero de liquidacion
             tipo_liq: str, tipo de liquidacion ('M'=mes; 'Q'=quincena; 'S'=semanal)
+            dias_base: int, opcional, días base de la liquidación (15 para quincena, 30 para mes)
         Retorna:
             (Resultado, Error, Registro1)
             - True, None, str: si todo salió bien
@@ -44,7 +45,16 @@ def process_reg1(cuit: str, periodo: datetime.date, q_empleados: int, nro_liq: i
     resp += tipo_liquidacion
     resp += str(nro_liq).zfill(5)
 
-    ds_base = 30
+    if dias_base is not None:
+        ds_base = int(dias_base)
+    elif tipo_liquidacion == 'Q':
+        ds_base = 15
+    elif tipo_liquidacion == 'S':
+        ds_base = 7
+    else:
+        ds_base = 30
+
     resp += str(ds_base).zfill(2) + str(q_empleados).zfill(6)
 
     return True, None, resp
+

@@ -4,7 +4,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-from numero_a_letras import numero_a_letras
+try:
+    from numero_a_letras import numero_a_letras
+except ImportError:
+    try:
+        from num2words import num2words
+        def numero_a_letras(num):
+            return num2words(num, lang='es')
+    except ImportError:
+        def numero_a_letras(num):
+            return str(num)
 from reportlab.lib.units import cm
 from reportlab.pdfgen.canvas import Canvas
 
@@ -826,26 +835,34 @@ class ReciboSueldo:
             return
 
         main_agrupadores = totales.get('main_agrupadores', {})
-        if not main_agrupadores:
+        comp_sal = totales.get('composicion_salarial')
+        if not main_agrupadores and not comp_sal:
             log.debug("[draw_pie_chart] main_agrupadores ausente o vacío, omitiendo gráfico")
             return
 
         neto = totales.get('neto_liquidacion', 0)
-        seg_social = main_agrupadores.get('AP_SS', 0) + main_agrupadores.get('CT_SS', 0)
-        obra_social = main_agrupadores.get('AP_OS', 0) + main_agrupadores.get('CT_OS', 0)
-        sindical = main_agrupadores.get('AP_SIN', 0) + main_agrupadores.get('CT_SIN', 0)
+        if comp_sal:
+            seg_social = comp_sal.get('ap_ss', 0) + comp_sal.get('ct_ss', 0) + comp_sal.get('ap_inssjp', 0) + comp_sal.get('ct_inssjp', 0)
+            obra_social = comp_sal.get('ap_os', 0) + comp_sal.get('ct_os', 0)
+            sindical = comp_sal.get('ap_sin', 0) + comp_sal.get('ct_sin', 0)
+            art = comp_sal.get('art', 0)
+            svida = comp_sal.get('svida', 0)
+        else:
+            seg_social = main_agrupadores.get('AP_SS', 0) + main_agrupadores.get('CT_SS', 0)
+            obra_social = main_agrupadores.get('AP_OS', 0) + main_agrupadores.get('CT_OS', 0)
+            sindical = main_agrupadores.get('AP_SIN', 0) + main_agrupadores.get('CT_SIN', 0)
 
-        art = sum(
-            item["importe"]
-            for item in conceptos
-            if item["code"].startswith("CTRART")
-        )
+            art = sum(
+                item["importe"]
+                for item in conceptos
+                if (item.get("code") or "").startswith(("CTRART", "COMP_ART", "ART"))
+            )
 
-        svida = sum(
-            item["importe"]
-            for item in conceptos
-            if item["code"].startswith("SEGOBL")
-        )
+            svida = sum(
+                item["importe"]
+                for item in conceptos
+                if (item.get("code") or "").startswith(("COMP_SCVO", "SEGOBL", "SCVO", "SEGURO", "COMP_VIDA"))
+            )
 
         total_rem = totales.get('total_remunerativo', 0)
         total_no_rem = totales.get('total_no_remunerativo', 0)

@@ -36,12 +36,14 @@ def genera_txt_lsd_liquidacion(
     fecha_pago_date = datetime.datetime.strptime(fecha_pago, '%Y-%m-%d').date()
 
     # Registro 1 -----------------------------------------------------------------------------------------
+    dias_base = liquidacion_data.get('dias_base')
     registro1_txt = process_reg1(
         cuit=cuit,
         periodo=periodo,
         q_empleados=q_empleados,
         nro_liq=nro_liq,
         tipo_liq=tipo_liquidacion,
+        dias_base=dias_base,
     )
     if not registro1_txt[0]:
         return False, registro1_txt[1], None
@@ -53,6 +55,7 @@ def genera_txt_lsd_liquidacion(
     registro2_txt = process_reg2(
         empleados_liquidados=empleados_liquidados,
         fecha_pago=fecha_pago_date,
+        tipo_liq=tipo_liquidacion,
     )
     if not registro2_txt[0]:
         return False, registro2_txt[1], None

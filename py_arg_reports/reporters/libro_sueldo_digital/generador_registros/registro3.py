@@ -48,10 +48,12 @@ def process_reg3(cuil: str, concepto_liq: dict) -> tuple:
             tipo = 'C'
 
         # Genero fila
-        # Por ahora todo en unidades días
+        # Unidades: H=horas, D=días, %=porcentaje, $=moneda, ' '=blanco (default: D)
         # TODO: período ajuste retroactivo
         # https://github.com/Artimezoft/payroll_arg_reportes/issues/21
-        item = f'03{cuil}{cod_con}{cantidad}D{importe}{tipo}{" " * 6}'
+        unidad = concepto.get('unidades') or concepto.get('unidad') or 'D'
+        unidad = str(unidad)[:1] if unidad else ' '
+        item = f'03{cuil}{cod_con}{cantidad}{unidad}{importe}{tipo}{" " * 6}'
         resp.append(item)
 
     resp_final = '\r\n'.join(resp)

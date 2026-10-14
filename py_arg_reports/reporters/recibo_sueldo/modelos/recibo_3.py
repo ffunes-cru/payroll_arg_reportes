@@ -377,28 +377,42 @@ class ReciboSueldo3(ReciboSueldo):
         # ── Extract values ─────────────────────────────────────────────────────
         totales = self.info_recibo['totales_liquidacion'][self.legajo]
         conceptos = self.info_recibo['conceptos_liquidados'][self.legajo]
-        main_agrupadores = totales.get('main_agrupadores', {})
+        comp_sal = totales.get('composicion_salarial')
 
-        ap_inssjp = next((item['importe'] for item in conceptos if item['code'] == 'INSSJP'), 0)
-        ct_inssjp = next((item['importe'] for item in conceptos if item['code'] == 'CTINSS'), 0)
-        art = sum(
-            item["importe"]
-            for item in conceptos
-            if item["code"].startswith("CTRART")
-        )
+        if comp_sal:
+            ct_sin = comp_sal.get('ct_sin', 0.0)
+            ap_sin = comp_sal.get('ap_sin', 0.0)
+            ct_ss = comp_sal.get('ct_ss', 0.0)
+            ap_ss = comp_sal.get('ap_ss', 0.0)
+            ct_os = comp_sal.get('ct_os', 0.0)
+            ap_os = comp_sal.get('ap_os', 0.0)
+            ct_inssjp = comp_sal.get('ct_inssjp', 0.0)
+            ap_inssjp = comp_sal.get('ap_inssjp', 0.0)
+            art = comp_sal.get('art', 0.0)
+            svida = comp_sal.get('svida', 0.0)
+        else:
+            main_agrupadores = totales.get('main_agrupadores', {})
 
-        svida = sum(
-            item["importe"]
-            for item in conceptos
-            if item["code"].startswith("SEGOBL")
-        )
+            ap_inssjp = next((item['importe'] for item in conceptos if item.get('code') in ['INSSJP', 'RET_INSSJP']), 0)
+            ct_inssjp = next((item['importe'] for item in conceptos if item.get('code') in ['CTINSS', 'COMP_INSSJP']), 0)
+            art = sum(
+                item["importe"]
+                for item in conceptos
+                if (item.get("code") or "").startswith(("CTRART", "COMP_ART", "ART"))
+            )
 
-        ct_sin = main_agrupadores.get('CT_SIN', 0)
-        ap_sin = main_agrupadores.get('AP_SIN', 0)
-        ct_ss = main_agrupadores.get('CT_SS', 0) - ct_inssjp
-        ap_ss = main_agrupadores.get('AP_SS', 0) - ap_inssjp
-        ct_os = main_agrupadores.get('CT_OS', 0)
-        ap_os = main_agrupadores.get('AP_OS', 0)
+            svida = sum(
+                item["importe"]
+                for item in conceptos
+                if (item.get("code") or "").startswith(("COMP_SCVO", "SEGOBL", "SCVO", "SEGURO", "COMP_VIDA"))
+            )
+
+            ct_sin = main_agrupadores.get('CT_SIN', 0)
+            ap_sin = main_agrupadores.get('AP_SIN', 0)
+            ct_ss = main_agrupadores.get('CT_SS', 0) - ct_inssjp
+            ap_ss = main_agrupadores.get('AP_SS', 0) - ap_inssjp
+            ct_os = main_agrupadores.get('CT_OS', 0)
+            ap_os = main_agrupadores.get('AP_OS', 0)
 
         # ── Title ─────────────────────────────────────────────────────────────
         self._set_font(bold=True, size=self.font_size_body)
@@ -450,6 +464,7 @@ class ReciboSueldo3(ReciboSueldo):
             None,
             ("Total ART", True, art),
             ("Empleador", False, art),
+            ("Trabajador", False, 0.0),
             None,
             ("Total Seguro Vida (SCVO)", True, svida),
             ("Empleador", False, svida),
