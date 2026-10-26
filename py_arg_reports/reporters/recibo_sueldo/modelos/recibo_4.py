@@ -47,7 +47,7 @@ class Recibo4LayoutConfig:
 
     conceptos_title_y_offset_cm: float = 0.3
     conceptos_title_left_x_offset_cm: float = 0.5
-    conceptos_title_cant_ratio: float = 0.56
+    conceptos_title_cant_ratio: float = 0.47
     conceptos_title_rem_ratio: float = 0.68
     conceptos_title_nr_ratio: float = 0.80
     conceptos_title_ap_ratio: float = 0.91
@@ -55,6 +55,8 @@ class Recibo4LayoutConfig:
     conceptos_title_rem_label_offset_cm: float = 0.2
     conceptos_title_nr_label_offset_cm: float = 0.2
     conceptos_title_ap_label_offset_cm: float = 0.2
+    # Base column: right-aligned, ends just before the Remun. column.
+    base_column_right_padding_cm: float = 0.6
 
     totales_line_ratio_in_conceptos: float = 0.15
     totales_label_offset_cm: float = 0.5
@@ -254,6 +256,11 @@ class FormatoRecibo4(FormatoReciboSueldo):
             conceptos_titles_y,
             "Cant.",
         )
+        c.drawRightString(
+            concepto_titles_x_rem - cfg.base_column_right_padding_cm * cm,
+            conceptos_titles_y,
+            "Base",
+        )
         c.drawString(
             concepto_titles_x_rem + cfg.conceptos_title_rem_label_offset_cm * cm,
             conceptos_titles_y,
@@ -319,6 +326,26 @@ class FormatoRecibo4(FormatoReciboSueldo):
 class ReciboSueldo4(ReciboSueldo):
     """Version-4-specific drawing overrides for ReciboSueldo (contribuciones section above conceptos)."""
 
+    def _base_x_ends(self) -> float:
+        return self.coordinates['concepto_titles_x_rem'] - FormatoRecibo4._default_config.base_column_right_padding_cm * cm
+
+    def _draw_base(self, concepto: dict, y: float) -> None:
+        base = concepto.get('base')
+        if base:
+            self.draw_text_with_end_coordinate(
+                self.c, self._base_x_ends(), y, float_to_format_currency(base, include_currency=False)
+            )
+
+    def draw_conceptos(self) -> None:
+        """Same as the parent layout, plus the Base column (same row walk)."""
+        super().draw_conceptos()
+        this_y = self.coordinates['starting_y_conceptos']
+        for concepto in self.info_recibo['conceptos_liquidados'][self.legajo]:
+            if concepto['code'] in EXCLUDED_CONCEPTS or concepto['tipo_concepto'] not in [1, 2, 3]:
+                continue
+            self._draw_base(concepto, this_y)
+            this_y -= 0.4 * cm
+
     def draw_contribuciones(self) -> None:
         """Column format matching conceptos_part: name | cant | importe right-aligned."""
         coords = self.coordinates
@@ -340,6 +367,7 @@ class ReciboSueldo4(ReciboSueldo):
             self._set_font(bold=False, size=self.font_size_body)
             self.c.drawString(coords['conceptos_x'], this_y, name)
             self.c.drawString(coords['concepto_titles_x_cant'], this_y, str(cantidad))
+            self._draw_base(concepto, this_y)
             self.draw_text_with_end_coordinate(
                 self.c,
                 coords['concepto_titles_x_ap_ends'],
@@ -348,10 +376,12 @@ class ReciboSueldo4(ReciboSueldo):
             )
             this_y -= 0.4 * cm
 
-        # Compute totals for header and Sueldo Bruto row
+        # Compute totals for header and Sueldo Bruto row. If the payload sends the totals
+        # (summed without rounding each line), use them so the receipt matches to the cent.
         totales = self.info_recibo['totales_liquidacion'][self.legajo]
         sueldo_bruto = totales.get('total_remunerativo', 0) + totales.get('total_no_remunerativo', 0)
-        costo_total = self.total_contribuciones + sueldo_bruto
+        self.total_contribuciones = totales.get('total_contribuciones') or self.total_contribuciones
+        costo_total = totales.get('costo_conceptos') or (self.total_contribuciones + sueldo_bruto)
 
         # Header: "COSTO TOTAL EMPLEADOR" in blue + total right-aligned
         header_y = coords['contribuciones_titles_y']
