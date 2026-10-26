@@ -55,7 +55,7 @@ class Recibo4LayoutConfig:
     conceptos_title_rem_label_offset_cm: float = 0.2
     conceptos_title_nr_label_offset_cm: float = 0.2
     conceptos_title_ap_label_offset_cm: float = 0.2
-    # Columna Base: alineada a la derecha, termina antes de la columna Remun.
+    # Base column: right-aligned, ends just before the Remun. column.
     base_column_right_padding_cm: float = 0.6
 
     totales_line_ratio_in_conceptos: float = 0.15
@@ -337,7 +337,7 @@ class ReciboSueldo4(ReciboSueldo):
             )
 
     def draw_conceptos(self) -> None:
-        """Igual que la base, más la columna Base (mismo recorrido de filas)."""
+        """Same as the parent layout, plus the Base column (same row walk)."""
         super().draw_conceptos()
         this_y = self.coordinates['starting_y_conceptos']
         for concepto in self.info_recibo['conceptos_liquidados'][self.legajo]:
@@ -376,8 +376,8 @@ class ReciboSueldo4(ReciboSueldo):
             )
             this_y -= 0.4 * cm
 
-        # Compute totals for header and Sueldo Bruto row. Si el origen informa los totales
-        # (calculados sin redondear cada línea), se usan esos para calzar al centavo.
+        # Compute totals for header and Sueldo Bruto row. If the payload sends the totals
+        # (summed without rounding each line), use them so the receipt matches to the cent.
         totales = self.info_recibo['totales_liquidacion'][self.legajo]
         sueldo_bruto = totales.get('total_remunerativo', 0) + totales.get('total_no_remunerativo', 0)
         self.total_contribuciones = totales.get('total_contribuciones') or self.total_contribuciones
